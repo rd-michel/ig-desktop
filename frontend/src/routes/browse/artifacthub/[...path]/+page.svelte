@@ -2,14 +2,24 @@
 	import { marked } from 'marked';
 	import { getContext } from 'svelte';
 	import { Browser } from '@wailsio/runtime';
+	import Panel from '$lib/components/Panel.svelte';
 	import ArtifactHub from '$lib/icons/artifacthub.svg?raw';
 	import Play from '$lib/icons/play-circle.svg?raw';
 	import ChevronLeft from '$lib/icons/chevron-left.svg?raw';
+	import Book from '$lib/icons/book.svg?raw';
+	import Code from '$lib/icons/code.svg?raw';
 	import Spinner from '$lib/components/Spinner.svelte';
+	import Signed from '$lib/icons/signature-locked.svg?raw';
+	import Unsigned from '$lib/icons/signature-slash.svg?raw';
+	import Star from '$lib/icons/star-sharp.svg?raw';
+	import Link from '$lib/icons/href.svg?raw';
+	import { page } from '$app/state';
 
 	let { data } = $props();
 
 	const api = getContext('api');
+
+	let environmentID = $derived(page.url.searchParams.get('env') || '');
 
 	let pkg = $state(null);
 
@@ -97,7 +107,7 @@
 		</div>
 	</div>
 {:else}
-	<div class="flex flex-row justify-between bg-gray-950 p-4">
+	<div class="flex flex-row justify-between bg-gray-950 p-4 shadow-lg">
 		<div class="flex flex-row items-center gap-4">
 			<button
 				onclick={() => history.back()}
@@ -106,54 +116,161 @@
 			>
 				{@html ChevronLeft}
 			</button>
-			<div class="flex flex-col">
-				<div class="text-xl">{pkg.name}</div>
-				<div class="text-xs">
-					<span class="text-gray-400">by</span>
-					{pkg.repository?.organization_display_name || pkg.repository?.user_alias}
-				</div>
-			</div>
 		</div>
 		<div class="flex flex-col">
 			<div class="text-right text-xs">powered by</div>
 			<div>{@html ArtifactHub}</div>
 		</div>
 	</div>
-	<div class="flex flex-row overflow-hidden">
-		<div class="flex w-2/3 flex-col">
-			<div class="marked flex flex-col overflow-hidden p-4">
-				<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-				<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<div class="flex grow flex-col overflow-auto bg-gray-950/80 p-8">
+		<div class="mx-auto flex w-full max-w-7xl flex-col gap-6">
+			<!-- Hero Section -->
+			<div
+				class="relative overflow-hidden rounded-xl border border-gray-800 bg-gradient-to-br from-gray-900 via-gray-950 to-gray-900 p-8 shadow-lg shadow-gray-950/50"
+			>
+				<!-- Decorative gradient overlay -->
 				<div
-					role="article"
-					aria-label="Package readme"
-					class="overflow-auto rounded bg-gray-800 p-4 whitespace-pre-wrap"
-					onclick={handleLinkClick}
-				>
-					{@html marked(pkg.readme || '')}
+					class="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-pink-500/5"
+				></div>
+
+				<div class="relative z-10 flex flex-col gap-6">
+					<!-- Title and badges -->
+					<div class="flex flex-col gap-3">
+						<div class="flex flex-wrap items-center gap-3">
+							<h1 class="text-4xl font-bold text-white">
+								{pkg.name}
+							</h1>
+							<span class="rounded-full bg-gray-800 px-3 py-1 text-sm text-gray-400"
+								>{pkg.version}</span
+							>
+							{#if pkg.official}
+								<span
+									class="rounded-full bg-blue-600/20 px-3 py-1 text-sm font-medium text-blue-400"
+									>Official</span
+								>
+							{/if}
+							{#if pkg.cncf}
+								<span
+									class="rounded-full bg-purple-600/20 px-3 py-1 text-sm font-medium text-purple-400"
+									>CNCF</span
+								>
+							{/if}
+						</div>
+
+						<div class="text-gray-400">
+							<span class="mr-1">by</span>
+							<span class="font-medium text-gray-200"
+								>{pkg.repository?.organization_display_name || pkg.repository?.user_alias}</span
+							>
+						</div>
+					</div>
+
+					<!-- Description -->
+					{#if pkg.description}
+						<p class="text-lg leading-relaxed text-gray-300">
+							{pkg.description}
+						</p>
+					{/if}
+
+					<!-- Metadata Row -->
+					<div class="flex flex-wrap items-center gap-6 border-t border-gray-800/50 pt-6">
+						<!-- Stars -->
+						<div class="flex items-center gap-2">
+							<div class="text-yellow-400">{@html Star}</div>
+							<span class="text-sm font-semibold text-gray-200">{pkg.stars || 0}</span>
+						</div>
+
+						<!-- Signed Status -->
+						<div class="flex items-center gap-2">
+							<div class={pkg.signed ? 'text-green-400' : 'text-gray-500'}>
+								{@html pkg.signed ? Signed : Unsigned}
+							</div>
+							<span class="{pkg.signed ? 'text-green-400' : 'text-gray-500'} text-sm">
+								{pkg.signed ? 'Signed' : 'Unsigned'}
+							</span>
+							{#if pkg.signed && pkg.signatures}
+								{#each pkg.signatures as sig}
+									<span class="rounded bg-green-900/30 px-2 py-0.5 text-xs text-green-400"
+										>{sig}</span
+									>
+								{/each}
+							{/if}
+						</div>
+
+						<!-- Repository Link -->
+						{#if pkg.repository?.url}
+							<button
+								onclick={() => Browser.OpenURL(pkg.repository.url)}
+								class="flex items-center gap-2 text-blue-400 transition-colors hover:text-blue-300"
+							>
+								<div>{@html Link}</div>
+								<span class="text-sm font-medium underline">Repository</span>
+							</button>
+						{/if}
+
+						<!-- ArtifactHub Link -->
+						<button
+							onclick={() =>
+								Browser.OpenURL(
+									`https://artifacthub.io/packages/ig-gadget/${pkg.repository?.name}/${pkg.normalized_name}`
+								)}
+							class="flex items-center gap-2 text-purple-400 transition-colors hover:text-purple-300"
+						>
+							<div>{@html Link}</div>
+							<span class="text-sm font-medium underline">ArtifactHub</span>
+						</button>
+					</div>
 				</div>
 			</div>
-		</div>
-		<div class="w-1/3 p-4 pl-0">
-			<div class="flex flex-col gap-4 rounded bg-gray-950 p-4">
-				<div>Images</div>
-				{#each pkg.containers_images as image}
-					<a href="/gadgets/run/{image.image}">
+
+			<!-- Main Content Area -->
+			<div class="flex flex-row gap-6 overflow-hidden">
+				<div class="flex w-2/3 flex-col">
+					<Panel title="README" icon={Book} color="blue">
+						<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+						<!-- svelte-ignore a11y_click_events_have_key_events -->
 						<div
-							class="flex flex-row flex-wrap justify-between gap-2 rounded bg-green-800 p-2 hover:bg-green-700"
+							role="article"
+							aria-label="Package readme"
+							class="marked overflow-auto rounded p-4 whitespace-pre-wrap"
+							onclick={handleLinkClick}
 						>
-							<div class="flex flex-row gap-2">
-								<div>{@html Play}</div>
-								<div>{image.name}</div>
-							</div>
-							<div class="flex flex-row flex-wrap gap-1">
-								{#each image.platforms as platform}
-									<div class="rounded bg-gray-900 px-2 py-1 text-xs">{platform}</div>
-								{/each}
-							</div>
+							{@html marked(pkg.readme || '')}
 						</div>
-					</a>
-				{/each}
+					</Panel>
+				</div>
+				<div class="w-1/3">
+					<Panel title="Images" icon={Code} color="green">
+						<div class="flex flex-col gap-3">
+							{#each pkg.containers_images as image}
+								<a
+									href="/gadgets/run/{image.image}{environmentID ? `?env=${environmentID}` : ''}"
+									class="group"
+								>
+									<div
+										class="flex flex-col gap-3 rounded-lg border border-gray-800 bg-gradient-to-br from-gray-900 to-gray-950 p-4 transition-all hover:scale-[1.02] hover:border-green-500/50 hover:shadow-lg hover:shadow-green-500/10"
+									>
+										<div class="flex items-center gap-3">
+											<div
+												class="rounded-lg bg-green-600/10 p-2 text-green-400 transition-colors group-hover:bg-green-600/20"
+											>
+												{@html Play}
+											</div>
+											<div class="flex-1 font-medium text-gray-200">{image.name}</div>
+										</div>
+										<div class="flex flex-row flex-wrap gap-1.5">
+											{#each image.platforms as platform}
+												<div class="rounded-full bg-gray-800 px-2.5 py-1 text-xs text-gray-400">
+													{platform}
+												</div>
+											{/each}
+										</div>
+									</div>
+								</a>
+							{/each}
+						</div>
+					</Panel>
+				</div>
 			</div>
 		</div>
 	</div>

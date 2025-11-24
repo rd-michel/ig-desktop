@@ -2,12 +2,12 @@
 	import ArtifactHub from '$lib/icons/artifacthub.svg?raw';
 	import Signed from '$lib/icons/signature-locked.svg?raw';
 	import Unsigned from '$lib/icons/signature-slash.svg?raw';
-	import Play from '$lib/icons/play-circle.svg?raw';
-	import Link from '$lib/icons/href.svg?raw';
+	import Play from '$lib/icons/play-small.svg?raw';
 	import Star from '$lib/icons/star-sharp.svg?raw';
 	import Spinner from '$lib/components/Spinner.svelte';
 	import ChevronLeft from '$lib/icons/chevron-left.svg?raw';
 	import Search from '$lib/icons/search-small.svg?raw';
+	import { page } from '$app/state';
 
 	// {
 	// 		"package_id": "e36de540-4772-4761-a321-f8936e73dc53",
@@ -47,6 +47,7 @@
 	let search = $state('');
 	let list = $state([]);
 	let isLoading = $state(true);
+	let environmentID = $derived(page.url.searchParams.get('env') || '');
 
 	let results = $derived(
 		!search
@@ -74,7 +75,7 @@
 	getList();
 </script>
 
-<div class="flex flex-1 flex-col overflow-hidden">
+<div class="flex flex-1 flex-col overflow-hidden bg-gray-950/80">
 	<div class="z-1 flex flex-col shadow-lg">
 		<div class="flex flex-row justify-between bg-gray-950 p-4">
 			<div class="flex flex-row items-center gap-4">
@@ -118,68 +119,75 @@
 			</div>
 		</div>
 	{:else if results.length > 0}
-		<div class="grid flex-1 grid-cols-4 gap-4 overflow-auto p-4">
-			{#each results as entry}
-				<a
-					href="artifacthub/{entry.repository.name}/{entry.normalized_name}/{entry.version}"
-					class="group relative flex flex-col justify-between gap-2 rounded-xl border border-gray-800 bg-gray-950 p-4 transition-all hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/10"
-				>
-					{#if entry.official}
-						<div class="ribbon-official text-xs">Official</div>
-					{/if}
-					<div>
-						<div>
-							<span class="font-medium text-gray-200">{entry.name}</span><span
-								class="ml-1 text-xs text-gray-400">{entry.version}</span
-							>
-						</div>
-						<div class="text-xs">
-							<span class="mr-1 text-xs text-gray-400">by </span>{entry.repository
-								.organization_display_name || entry.repository.user_alias}
-						</div>
-						<div class="overflow-hidden py-2 text-xs text-ellipsis text-gray-400">
-							{entry.description}
-						</div>
-					</div>
-					<div class="flex flex-col gap-2">
-						<div class="flex flex-row flex-wrap gap-2">
-							<span
-								class="flex flex-row gap-1 text-xs text-gray-400 transition-colors"
-								title="View on ArtifactHub"
-								><span class="h-2 w-2">{@html Link}</span><span>ArtifactHub </span></span
-							>
-							<span
-								class="flex flex-row gap-1 text-xs text-gray-400 transition-colors"
-								title="View Repository"
-								><span class="h-2 w-2">{@html Link}</span><span>Repository </span></span
-							>
-						</div>
-						<div class="flex flex-row items-center justify-between">
-							<div class="flex flex-row gap-4">
-								<div>
-									{#if entry.signed}
-										<div title="Signed" class="text-gray-400">{@html Signed}</div>
-									{:else}
-										<div title="Not Signed" class="text-gray-400">{@html Unsigned}</div>
-									{/if}
-								</div>
-								<div class="flex flex-row items-center gap-1">
-									<div title="Stars" class="text-gray-400">{@html Star}</div>
-									<div class="text-xs text-gray-400">{entry.stars}</div>
-								</div>
-							</div>
-							<div class="flex flex-row gap-2">
-								<div
-									class="text-gray-400 transition-colors group-hover:text-blue-400"
-									title="Run Gadget"
+		<div class="flex flex-1 flex-col overflow-auto p-8">
+			<div
+				class="mx-auto grid w-full max-w-7xl grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+			>
+				{#each results as entry}
+					<a
+						href="artifacthub/{entry.repository
+							.name}/{entry.normalized_name}/{entry.version}{environmentID
+							? `?env=${environmentID}`
+							: ''}"
+						class="group relative flex flex-col justify-between gap-3 rounded-xl border border-gray-800 bg-gradient-to-br from-gray-900 via-gray-950 to-gray-900 p-5 shadow-lg shadow-gray-950/50 transition-all hover:scale-[1.02] hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/10"
+					>
+						{#if entry.official}
+							<div class="ribbon-official text-xs">Official</div>
+						{/if}
+
+						<!-- Decorative gradient overlay on hover -->
+						<div
+							class="absolute inset-0 bg-gradient-to-br from-blue-500/0 via-purple-500/0 to-pink-500/0 opacity-0 transition-opacity duration-300 group-hover:opacity-10"
+						></div>
+
+						<div class="relative z-10">
+							<div>
+								<span class="text-lg font-semibold">{entry.name}</span>
+								<span class="ml-2 rounded-full bg-gray-800 px-2 py-0.5 text-xs text-gray-400"
+									>{entry.version}</span
 								>
-									{@html Play}
+							</div>
+							<div class="mb-4 text-xs text-gray-400">
+								<span class="mr-1">by</span>
+								<span class="font-medium text-gray-300"
+									>{entry.repository.organization_display_name || entry.repository.user_alias}</span
+								>
+							</div>
+							<div class="line-clamp-3 text-sm leading-relaxed text-gray-400">
+								{entry.description}
+							</div>
+						</div>
+						<div class="relative z-10 flex flex-col gap-3 border-t border-gray-800/50 pt-3">
+							<div class="flex flex-row items-center justify-between">
+								<div class="flex flex-row items-center gap-3">
+									<div
+										class="flex items-center gap-1"
+										title={entry.signed ? 'Signed' : 'Not Signed'}
+									>
+										{#if entry.signed}
+											<div class="text-green-400">{@html Signed}</div>
+										{:else}
+											<div class="text-gray-500">{@html Unsigned}</div>
+										{/if}
+									</div>
+									<div class="flex flex-row items-center gap-1.5" title="Stars">
+										<div class="text-yellow-400">{@html Star}</div>
+										<div class="text-sm font-medium text-gray-300">{entry.stars}</div>
+									</div>
+								</div>
+								<div
+									class="flex items-center gap-2 rounded-lg bg-blue-600/10 px-3 py-1.5 transition-all group-hover:bg-blue-600/20"
+								>
+									<span class="text-xs font-medium text-blue-400">Run</span>
+									<div class="text-blue-400">
+										{@html Play}
+									</div>
 								</div>
 							</div>
 						</div>
-					</div>
-				</a>
-			{/each}
+					</a>
+				{/each}
+			</div>
 		</div>
 	{:else}
 		<div class="flex flex-1 items-center justify-center">

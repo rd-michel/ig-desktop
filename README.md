@@ -4,7 +4,7 @@
 
 ## About
 
-[Inspektor Gadget](https://inspektor-gadget.io) Desktop App bases on [wails](https://wails.io) and
+[Inspektor Gadget](https://inspektor-gadget.io) Desktop App based on [wails](https://wails.io) and
 [Svelte](https://svelte.dev). Available for Windows, Mac and Linux.
 
 ## Installation
@@ -31,4 +31,4 @@ Download the latest Linux binary from the [releases page](https://github.com/ins
 
 ## Status
 
-This project is in it's really early stages. Expect rough edges and bugs, but please let us know about them.
+This project is in its really early stages. Expect rough edges and bugs, but please let us know about them.

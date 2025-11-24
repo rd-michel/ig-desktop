@@ -2,7 +2,7 @@
 	import { getContext } from 'svelte';
 	import { goto } from '$app/navigation';
 	import Panel from '$lib/components/Panel.svelte';
-	import Params from '$lib/components/params.svelte';
+	import Params from '$lib/components/Params.svelte';
 	import K8sDeployModal from '$lib/components/K8sDeployModal.svelte';
 	import Spinner from '$lib/components/Spinner.svelte';
 	import { deployments } from '$lib/shared/deployments.svelte';
@@ -14,6 +14,8 @@
 	import Code from '$lib/icons/code.svg?raw';
 	import Adjustments from '$lib/icons/adjustments.svg?raw';
 	import type { IGDeploymentStatus, RuntimeInfo } from '$lib/types';
+	import Input from '$lib/components/forms/Input.svelte';
+	import Select from '$lib/components/forms/Select.svelte';
 
 	const api: any = getContext('api');
 
@@ -142,9 +144,6 @@
 	}
 
 	let validated = $derived(name.length > 0 && selectedRuntime);
-	let showDeployWarning = $derived(
-		selectedRuntime === 'grpc-k8s' && deploymentStatus && !deploymentStatus.deployed
-	);
 </script>
 
 <div class="z-1 flex flex-col shadow-lg">
@@ -153,179 +152,170 @@
 	</div>
 </div>
 
-<div class="flex grow flex-col gap-4 overflow-auto p-4">
-	<Panel title="Environment Name" icon={Plus} color="gray">
-		<div class="flex flex-row items-center gap-4">
-			<div
-				class="group-hover:bg-brand flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-3xl bg-gray-700 text-gray-100 transition-all duration-200 group-hover:rounded-2xl group-hover:text-white"
-			>
-				<div class="grid" title={name}>
-					<div class="z-10 col-start-1 row-start-1 flex justify-center text-lg shadow">
-						{name.substring(0, 3)}
+<div class="flex grow flex-col overflow-auto p-8">
+	<div class="mx-auto flex w-full max-w-7xl flex-col gap-4">
+		<Panel title="Environment Name" icon={Plus} color="gray">
+			<div class="flex flex-row items-center gap-4">
+				<div
+					class="group-hover:bg-brand flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-3xl bg-gray-700 text-gray-100 transition-all duration-200 group-hover:rounded-2xl group-hover:text-white"
+				>
+					<div class="grid" title={name}>
+						<div class="z-10 col-start-1 row-start-1 flex justify-center text-lg shadow">
+							{name.substring(0, 3)}
+						</div>
 					</div>
 				</div>
+				<div class="flex grow flex-col gap-2">
+					<Input bind:value={name} placeholder="Enter environment name..." class="text-sm" />
+				</div>
 			</div>
-			<div class="flex grow flex-col gap-2">
-				<input
-					type="text"
-					bind:value={name}
-					placeholder="Enter environment name..."
-					class="w-full rounded bg-gray-800 p-2 text-sm transition-colors focus:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-				/>
-			</div>
-		</div>
-	</Panel>
+		</Panel>
 
-	<Panel title="Runtime" icon={Code} color="gray">
-		<div class="flex flex-col gap-3">
-			<div class="text-sm text-gray-400">Select your target runtime</div>
-			<div class="grid grid-cols-2 gap-3">
-				{#if runtimes}
-					{#each runtimes as rt}
-						<div
-							onpointerdown={(e) => {
-								// Don't trigger if clicking on select dropdown
-								if (e.target instanceof HTMLSelectElement) return;
-								setRuntime(rt.key);
-							}}
-							class="flex cursor-pointer flex-col gap-3 rounded-lg border-2 bg-gray-900 p-4 transition-all select-none hover:bg-gray-800"
-							class:border-gray-700={selectedRuntime !== rt.key}
-							class:border-purple-600={selectedRuntime === rt.key}
-							class:bg-gray-800={selectedRuntime === rt.key}
-						>
-							<div class="flex flex-col gap-1">
-								<div class="font-medium">{rt.title}</div>
-								<div class="text-sm text-gray-400">{rt.description}</div>
-							</div>
-
-							<!-- Kubernetes Context Selector -->
-							{#if rt.key === 'grpc-k8s' && rt.contexts && rt.contexts.length > 0}
-								<div class="flex flex-col gap-1.5" onclick={(e) => e.stopPropagation()}>
-									<label for="context-select-{rt.key}" class="text-xs text-gray-500">
-										Kubernetes Context:
-									</label>
-									<select
-										id="context-select-{rt.key}"
-										bind:value={selectedContext}
-										onchange={handleContextChange}
-										class="hover:bg-gray-750 cursor-pointer rounded border border-gray-700 bg-gray-800 px-2 py-1.5 text-sm text-white transition-all focus:border-purple-600 focus:outline-none"
-										disabled={selectedRuntime !== rt.key}
-									>
-										{#each rt.contexts as context}
-											<option value={context}>{context}</option>
-										{/each}
-									</select>
+		<Panel title="Runtime" icon={Code} color="gray">
+			<div class="flex flex-col gap-3">
+				<div class="text-sm text-gray-400">Select your target runtime</div>
+				<div class="grid grid-cols-2 gap-3">
+					{#if runtimes}
+						{#each runtimes as rt}
+							<div
+								onpointerdown={(e) => {
+									// Don't trigger if clicking on select dropdown
+									if (e.target instanceof HTMLSelectElement) return;
+									setRuntime(rt.key);
+								}}
+								class="flex cursor-pointer flex-col gap-3 rounded-lg border-2 bg-gray-900 p-4 transition-all select-none hover:bg-gray-800"
+								class:border-gray-700={selectedRuntime !== rt.key}
+								class:border-purple-600={selectedRuntime === rt.key}
+								class:bg-gray-800={selectedRuntime === rt.key}
+							>
+								<div class="flex flex-col gap-1">
+									<div class="font-medium">{rt.title}</div>
+									<div class="text-sm text-gray-400">{rt.description}</div>
 								</div>
-							{/if}
-						</div>
-					{/each}
-				{/if}
-			</div>
-		</div>
-	</Panel>
 
-	<!-- Deployment Status for K8s Runtime -->
-	{#if selectedRuntime === 'grpc-k8s'}
-		{#if checkingDeployment}
-			<!-- Checking Deployment Status -->
-			<div
-				class="flex items-center justify-center gap-4 rounded-lg border border-gray-700 bg-gray-900/50 p-8"
-			>
-				<Spinner />
-				<div class="text-gray-400">Checking Inspektor Gadget deployment status...</div>
-			</div>
-		{:else if deploymentStatus?.deployed}
-			<!-- IG Detected -->
-			<div
-				class="flex flex-col justify-between gap-4 rounded-lg border border-green-800/50 bg-green-900/10 p-4 md:flex-row"
-			>
-				<div class="flex gap-3">
-					<div class="text-green-400">
-						<svg
-							xmlns="http://www.w3.org/2000/svg"
-							fill="none"
-							viewBox="0 0 24 24"
-							stroke-width="2"
-							stroke="currentColor"
-							class="h-6 w-6"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-							/>
-						</svg>
-					</div>
-					<div class="flex-1">
-						<h3 class="font-semibold text-green-400">Inspektor Gadget Detected</h3>
-						<div class="mt-1 flex flex-col gap-1 text-sm text-gray-400">
-							<p>Inspektor Gadget is deployed and ready to use.</p>
-							<div class="mt-1 flex gap-4 text-xs">
-								<span>
-									<span class="text-gray-500">Namespace:</span>
-									<span class="font-mono text-green-400">{deploymentStatus.namespace}</span>
-								</span>
-								{#if deploymentStatus.version}
-									<span>
-										<span class="text-gray-500">Version:</span>
-										<span class="font-mono text-green-400">{deploymentStatus.version}</span>
-									</span>
+								<!-- Kubernetes Context Selector -->
+								{#if rt.key === 'grpc-k8s' && rt.contexts && rt.contexts.length > 0}
+									<div class="flex flex-col gap-1.5" onclick={(e) => e.stopPropagation()}>
+										<Select
+											bind:value={selectedContext}
+											options={rt.contexts.map((ctx) => ({ value: ctx, label: ctx }))}
+											onchange={handleContextChange}
+											label="Kubernetes Context:"
+											disabled={selectedRuntime !== rt.key}
+											class="text-sm"
+										/>
+									</div>
 								{/if}
 							</div>
+						{/each}
+					{/if}
+				</div>
+			</div>
+		</Panel>
+
+		<!-- Deployment Status for K8s Runtime -->
+		{#if selectedRuntime === 'grpc-k8s'}
+			{#if checkingDeployment}
+				<!-- Checking Deployment Status -->
+				<div
+					class="flex items-center justify-center gap-4 rounded-lg border border-gray-700 bg-gray-900/50 p-8"
+				>
+					<Spinner />
+					<div class="text-gray-400">Checking Inspektor Gadget deployment status...</div>
+				</div>
+			{:else if deploymentStatus?.deployed}
+				<!-- IG Detected -->
+				<div
+					class="flex flex-col justify-between gap-4 rounded-lg border border-green-800/50 bg-green-900/10 p-4 md:flex-row"
+				>
+					<div class="flex gap-3">
+						<div class="text-green-400">
+							<svg
+								xmlns="http://www.w3.org/2000/svg"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke-width="2"
+								stroke="currentColor"
+								class="h-6 w-6"
+							>
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+								/>
+							</svg>
+						</div>
+						<div class="flex-1">
+							<h3 class="font-semibold text-green-400">Inspektor Gadget Detected</h3>
+							<div class="mt-1 flex flex-col gap-1 text-sm text-gray-400">
+								<p>Inspektor Gadget is deployed and ready to use.</p>
+								<div class="mt-1 flex gap-4 text-xs">
+									<span>
+										<span class="text-gray-500">Namespace:</span>
+										<span class="font-mono text-green-400">{deploymentStatus.namespace}</span>
+									</span>
+									{#if deploymentStatus.version}
+										<span>
+											<span class="text-gray-500">Version:</span>
+											<span class="font-mono text-green-400">{deploymentStatus.version}</span>
+										</span>
+									{/if}
+								</div>
+							</div>
 						</div>
 					</div>
-				</div>
-				<div class="flex flex-col gap-2">
-					<button
-						onclick={openRedeployModal}
-						class="flex items-center justify-center gap-2 rounded-lg border border-purple-600 bg-purple-900/20 px-4 py-2.5 text-sm text-purple-400 transition-all hover:bg-purple-900/50"
-					>
-						<span>{@html Refresh}</span>
-						<span>Redeploy Inspektor Gadget</span>
-					</button>
-					<button
-						onclick={openUndeployModal}
-						class="flex items-center justify-center gap-2 rounded-lg border border-red-600 bg-red-900/20 px-4 py-2.5 text-sm text-red-400 transition-all hover:bg-red-900/50"
-					>
-						<span>{@html Trash}</span>
-						<span>Undeploy Inspektor Gadget</span>
-					</button>
-				</div>
-			</div>
-		{:else}
-			<!-- IG Not Detected -->
-			<div class="flex flex-col gap-4 rounded-lg border border-blue-800/50 bg-blue-900/10 p-4">
-				<div class="flex items-start gap-3">
-					<div class="text-blue-400">{@html Info}</div>
-					<div class="flex-1">
-						<h3 class="font-semibold text-blue-400">Inspektor Gadget Not Detected</h3>
-						<p class="mt-1 text-sm text-gray-400">
-							Inspektor Gadget does not appear to be deployed in your Kubernetes cluster. You can
-							deploy it now using the official Helm chart.
-						</p>
-						{#if deploymentStatus?.error}
-							<p class="mt-2 text-xs text-red-400">
-								Note: {deploymentStatus.error}
-							</p>
-						{/if}
+					<div class="flex flex-col gap-2">
+						<button
+							onclick={openRedeployModal}
+							class="flex items-center justify-center gap-2 rounded-lg border border-purple-600 bg-purple-900/20 px-4 py-2.5 text-sm text-purple-400 transition-all hover:bg-purple-900/50"
+						>
+							<span>{@html Refresh}</span>
+							<span>Redeploy Inspektor Gadget</span>
+						</button>
+						<button
+							onclick={openUndeployModal}
+							class="flex items-center justify-center gap-2 rounded-lg border border-red-600 bg-red-900/20 px-4 py-2.5 text-sm text-red-400 transition-all hover:bg-red-900/50"
+						>
+							<span>{@html Trash}</span>
+							<span>Undeploy Inspektor Gadget</span>
+						</button>
 					</div>
 				</div>
-				<button
-					onclick={openDeployModal}
-					class="flex items-center justify-center gap-2 rounded-lg bg-blue-800 px-4 py-2.5 text-sm text-white transition-all hover:bg-blue-700"
-				>
-					<span>{@html Server}</span>
-					<span>Deploy Inspektor Gadget</span>
-				</button>
-			</div>
+			{:else}
+				<!-- IG Not Detected -->
+				<div class="flex flex-col gap-4 rounded-lg border border-blue-800/50 bg-blue-900/10 p-4">
+					<div class="flex items-start gap-3">
+						<div class="text-blue-400">{@html Info}</div>
+						<div class="flex-1">
+							<h3 class="font-semibold text-blue-400">Inspektor Gadget Not Detected</h3>
+							<p class="mt-1 text-sm text-gray-400">
+								Inspektor Gadget does not appear to be deployed in your Kubernetes cluster. You can
+								deploy it now using the official Helm chart.
+							</p>
+							{#if deploymentStatus?.error}
+								<p class="mt-2 text-xs text-red-400">
+									Note: {deploymentStatus.error}
+								</p>
+							{/if}
+						</div>
+					</div>
+					<button
+						onclick={openDeployModal}
+						class="flex items-center justify-center gap-2 rounded-lg bg-blue-800 px-4 py-2.5 text-sm text-white transition-all hover:bg-blue-700"
+					>
+						<span>{@html Server}</span>
+						<span>Deploy Inspektor Gadget</span>
+					</button>
+				</div>
+			{/if}
 		{/if}
-	{/if}
 
-	{#if runtimeParams && runtimeParams.length > 0}
-		<Panel title="Configuration" icon={Adjustments} color="gray">
-			<Params params={runtimeParams} {values} />
-		</Panel>
-	{/if}
+		{#if runtimeParams && runtimeParams.length > 0}
+			<Panel title="Configuration" icon={Adjustments} color="gray">
+				<Params params={runtimeParams} {values} />
+			</Panel>
+		{/if}
+	</div>
 </div>
 
 <!-- K8s Deploy Modal -->
